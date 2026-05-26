@@ -6,32 +6,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const transitInput = document.getElementById('transit-input');
     const transitResult = document.getElementById('transit-result');
 
-    const mockStatuses = [
-        { status: 'normal', text: '平常運転', desc: '現在、遅れなどの情報はありません。', class: 'status-normal' },
-        { status: 'delay', text: '遅延', desc: '一部の列車に10〜15分の遅れが出ています。', class: 'status-delay' },
-        { status: 'stop', text: '運転見合わせ', desc: '人身事故の影響で現在運転を見合わせています。振替輸送をご利用ください。', class: 'status-stop' }
-    ];
-
-    transitForm.addEventListener('submit', (e) => {
+    transitForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const lineName = transitInput.value.trim();
         if (!lineName) return;
 
-        // ランダムにステータスを決定（プロトタイプ用）
-        const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
-
+        // ローディング表示
         transitResult.innerHTML = `
-            <span class="status-badge ${randomStatus.class}">${randomStatus.text}</span>
-            <h3 style="margin-top:0.5rem; margin-bottom:0.25rem;">${lineName}</h3>
-            <p style="font-size:0.9rem; color:var(--text-sub);">${randomStatus.desc}</p>
+            <div style="text-align:center; padding: 1rem;">
+                <p style="color:var(--text-sub);">運行情報を取得中...</p>
+            </div>
         `;
-        
         transitResult.classList.remove('hidden');
-        
-        // 再生アニメーションのためにクラスをリセット
-        transitResult.style.animation = 'none';
-        transitResult.offsetHeight; // trigger reflow
-        transitResult.style.animation = null;
+
+        try {
+            // RTI Gikenの鉄道遅延情報APIを呼び出し
+            const response = await fetch('https://tetsudo.rti-giken.jp/free/delay.json');
+            if (!response.ok) throw new Error('API fetch failed');
+            
+            const delays = await response.json();
+            
+            // 入力された路線名が遅延リストに含まれているかチェック（部分一致）
+            const isDelayed = delays.some(train => train.name.includes(lineName));
+            
+            let statusBadge, statusText, statusDesc;
+            
+            if (isDelayed) {
+                statusBadge = 'status-delay';
+                statusText = '遅延';
+                statusDesc = 'APIの情報によると、現在この路線に遅れが発生しています。';
+            } else {
+                statusBadge = 'status-normal';
+                statusText = '平常運転';
+                statusDesc = '現在、遅れなどの情報はありません。（※APIに登録がない路線の場合も平常運転と表示されます）';
+            }
+
+            transitResult.innerHTML = `
+                <span class="status-badge ${statusBadge}">${statusText}</span>
+                <h3 style="margin-top:0.5rem; margin-bottom:0.25rem;">${lineName}</h3>
+                <p style="font-size:0.9rem; color:var(--text-sub);">${statusDesc}</p>
+            `;
+            
+            // 再生アニメーションのためにクラスをリセット
+            transitResult.style.animation = 'none';
+            transitResult.offsetHeight; // trigger reflow
+            transitResult.style.animation = null;
+            
+        } catch (error) {
+            transitResult.innerHTML = `
+                <span class="status-badge status-stop">エラー</span>
+                <h3 style="margin-top:0.5rem; margin-bottom:0.25rem;">${lineName}</h3>
+                <p style="font-size:0.9rem; color:var(--text-sub);">情報の取得に失敗しました。時間をおいて再試行してください。</p>
+            `;
+        }
     });
 
     // -------------------------
