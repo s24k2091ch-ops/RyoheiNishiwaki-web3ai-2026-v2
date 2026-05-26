@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transit & Task Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Dash<span class="highlight">Sync</span></h1>
+            <p>VPC Prototype - Ryohei Nishiwaki</p>
+        </header>
+        
+        <main class="dashboard">
+            <!-- 交通機関セクション -->
+            <section class="glass-card transit-section">
+                <h2>🚆 交通機関の運行状況</h2>
+                <form id="transit-form" class="input-group">
+                    <input type="text" id="transit-input" placeholder="路線名を入力 (例: 総武線, 京葉線)" required>
+                    <button type="submit" class="primary-btn">確認</button>
+                </form>
+                <div id="transit-result" class="result-container hidden">
+                    <!-- JSで動的に追加 -->
+                </div>
+            </section>
+
+            <!-- 課題管理セクション -->
+            <section class="glass-card task-section">
+                <h2>📝 提出物の締め切り管理</h2>
+                <form id="task-form" class="input-group">
+                    <input type="text" id="task-name" placeholder="課題名を入力" required>
+                    <input type="date" id="task-deadline" required>
+                    <button type="submit" class="primary-btn">追加</button>
+                </form>
+                <div id="task-list" class="task-list">
+                    <!-- JSで動的に追加 -->
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
