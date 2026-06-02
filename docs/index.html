@@ -213,13 +213,16 @@
       <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
         <i class="ti ti-activity" style="color: var(--amber-dot); font-size:14px;"></i> 路線名（運行状況確認）を登録
       </div>
-      <div class="add-row" style="margin-bottom: 1.25rem;">
+      <div class="add-row" style="margin-bottom: 4px;">
         <input type="text" id="lineInput" placeholder="路線名（例：総武線）" onkeydown="if(event.key==='Enter')addLineOnly()" />
         <select id="typeSelect1">
           <option value="train">電車</option>
           <option value="subway">地下鉄</option>
           <option value="bus">バス</option>
         </select>
+      </div>
+      <div class="add-row" style="margin-bottom: 1.25rem;">
+        <input type="text" id="linePurpose" placeholder="目的（例：大学通学、○○会社オープンカンパニー）" onkeydown="if(event.key==='Enter')addLineOnly()" />
         <button class="btn-primary" onclick="addLineOnly()" style="background: var(--text-primary); color: var(--bg); border: none;"><i class="ti ti-plus" aria-hidden="true"></i> 路線を追加</button>
       </div>
 
@@ -229,7 +232,7 @@
       <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
         <i class="ti ti-map-2" style="color: var(--blue-text); font-size:14px;"></i> 出発地 ➔ 目的地（Googleマップ乗換案内）を登録
       </div>
-      <div class="add-row">
+      <div class="add-row" style="margin-bottom: 4px;">
         <input type="text" id="startInput" placeholder="出発地（例：稲毛駅）" onkeydown="if(event.key==='Enter')addRoute()" />
         <input type="text" id="destInput" placeholder="目的地（例：津田沼駅）" onkeydown="if(event.key==='Enter')addRoute()" />
         <select id="typeSelect2">
@@ -237,6 +240,9 @@
           <option value="subway">地下鉄</option>
           <option value="bus">バス</option>
         </select>
+      </div>
+      <div class="add-row">
+        <input type="text" id="routePurpose" placeholder="目的（例：大学通学、○○会社オープンカンパニー）" onkeydown="if(event.key==='Enter')addRoute()" />
         <button class="btn-primary" onclick="addRoute()" style="background: var(--text-primary); color: var(--bg); border: none;"><i class="ti ti-plus" aria-hidden="true"></i> ルートを追加</button>
       </div>
     </div>
@@ -394,6 +400,7 @@ function renderTransit() {
 
     // 表示用のタイトル（目的地があれば矢印で繋ぐ）
     const titleText = line.dest ? `${esc(line.name)} ➔ ${esc(line.dest)}` : esc(line.name);
+    const purposeHTML = line.purpose ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:6px;display:flex;align-items:center;gap:5px;"><i class="ti ti-tag" style="font-size:13px;color:var(--purple-text)"></i>${esc(line.purpose)}</div>` : '';
 
     return `<div class="transit-card">
       <div class="tc-header">
@@ -406,6 +413,7 @@ function renderTransit() {
           <button class="btn-del" onclick="deleteLine(${i})" aria-label="削除"><i class="ti ti-x"></i></button>
         </div>
       </div>
+      ${purposeHTML}
 
       <div style="margin-top:10px">${statusDisplay}</div>
 
@@ -440,12 +448,14 @@ function addLineOnly() {
   lines.push({ 
     name, 
     dest: '', 
+    purpose: document.getElementById('linePurpose').value.trim(),
     type: document.getElementById('typeSelect1').value, 
     status: 'unknown', 
     note: '', 
     updatedAt: '' 
   });
   document.getElementById('lineInput').value = '';
+  document.getElementById('linePurpose').value = '';
   saveLines(); renderTransit(); updateSummary();
 }
 
@@ -460,6 +470,7 @@ function addRoute() {
   lines.push({ 
     name: start, 
     dest: dest, 
+    purpose: document.getElementById('routePurpose').value.trim(),
     type: document.getElementById('typeSelect2').value, 
     status: 'unknown', 
     note: '', 
@@ -467,6 +478,7 @@ function addRoute() {
   });
   document.getElementById('startInput').value = '';
   document.getElementById('destInput').value = '';
+  document.getElementById('routePurpose').value = '';
   saveLines(); renderTransit(); updateSummary();
 }
 
