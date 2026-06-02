@@ -173,9 +173,9 @@
 
   <div class="summary-grid">
     <div class="summary-card">
-      <div class="summary-label"><i class="ti ti-train" aria-hidden="true"></i>登録路線</div>
+      <div class="summary-label"><i class="ti ti-train" aria-hidden="true"></i>登録路線・ルート</div>
       <div class="summary-value" id="sumLines">0</div>
-      <div class="summary-sub">路線</div>
+      <div class="summary-sub">件</div>
     </div>
     <div class="summary-card">
       <div class="summary-label"><i class="ti ti-alert-triangle" aria-hidden="true"></i>遅延・障害</div>
@@ -203,10 +203,11 @@
   <div class="section active" id="tab-transit">
     <div class="info-banner">
       <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
-      路線を追加すると公式サイトのリンクが表示されます。ページを開いて確認後、手動でステータスを更新してください。
+      出発地と目的地を入力すると、Googleマップへの連携リンクが生成されます。遅延状況のリアルタイム確認にご活用ください。
     </div>
     <div class="add-row">
-      <input type="text" id="lineInput" placeholder="路線名（例：山手線）" onkeydown="if(event.key==='Enter')addLine()" />
+      <input type="text" id="lineInput" placeholder="路線名 または 出発地（例：津田沼駅）" onkeydown="if(event.key==='Enter')addLine()" />
+      <input type="text" id="destInput" placeholder="目的地（例：千葉工業大学、任意）" onkeydown="if(event.key==='Enter')addLine()" />
       <select id="typeSelect">
         <option value="train">電車</option>
         <option value="subway">地下鉄</option>
@@ -258,19 +259,25 @@ const typeIcon  = { train:'ti-train', subway:'ti-train', bus:'ti-bus' };
 const dlTypeLabel = { report:'レポート', exam:'試験', assignment:'課題', other:'その他' };
 
 /* ── Search URL builder ── */
-function searchURL(name, type) {
-  const q = encodeURIComponent(name + ' 運行情報');
+function searchURL(name, type, dest) {
   const urls = [];
 
-  // 公式サイトマッピング（2026年5月確認済みURL）
-  // JR東日本は路線別ページの廃止により関東エリア一覧ページへ統合
+  // 目的地(dest)が入力されている場合はGoogleマップルート案内を最優先で表示
+  if (dest) {
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(name)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
+    urls.push({ label: 'Googleマップ乗換案内', url: mapsUrl, isPrimary: true });
+  }
+
+  const q = encodeURIComponent(name + ' 運行情報');
+
+  // 公式サイトマッピング
   const JRE = 'https://traininfo.jreast.co.jp/train_info/kanto.aspx';
   const METRO = 'https://www.tokyometro.jp/unkou/index.html';
   const TOEI  = 'https://www.kotsu.metro.tokyo.jp/subway/unkou.html';
   const map = {
     '山手線':JRE, '中央線':JRE, '京浜東北線':JRE, '総武線':JRE,
     '東海道線':JRE, '横須賀線':JRE, '埼京線':JRE, '常磐線':JRE,
-    '南武線':JRE, '横浜線':JRE, '武蔵野線':JRE, '宇通宮線':JRE,
+    '南武線':JRE, '横浜線':JRE, '武蔵野線':JRE, '宇都宮線':JRE,
     '高崎線':JRE, '湘南新宿ライン':JRE, '上野東京ライン':JRE,
     'JR東日本':JRE,
     '東京メトロ':METRO, '銀座線':METRO, '丸ノ内線':METRO,
@@ -338,14 +345,16 @@ function switchTab(name, btn) {
 function renderTransit() {
   const el = document.getElementById('transitList');
   if (!lines.length) {
-    el.innerHTML = `<div class="empty"><i class="ti ti-train-off"></i>路線がまだ登録されていません<small>上のフォームから追加してください</small></div>`;
+    el.innerHTML = `<div class="empty"><i class="ti ti-train-off"></i>路線・ルートがまだ登録されていません<small>上のフォームから追加してください</small></div>`;
     return;
   }
   el.innerHTML = lines.map((line, i) => {
-    const links = searchURL(line.name, line.type);
-    const linksHTML = links.map(l =>
-      `<a class="ext-link" href="${l.url}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="font-size:12px"></i>${esc(l.label)}</a>`
-    ).join('');
+    const links = searchURL(line.name, line.type, line.dest);
+    const linksHTML = links.map(l => {
+      const isPrimaryClass = l.isPrimary ? 'style="font-weight:600;background:var(--accent-bg);border:1px solid var(--blue-text);"' : '';
+      const icon = l.isPrimary ? 'ti-map-2' : 'ti-external-link';
+      return `<a class="ext-link" href="${l.url}" target="_blank" rel="noopener" ${isPrimaryClass}><i class="ti ${icon}" style="font-size:12px"></i>${esc(l.label)}</a>`;
+    }).join('');
 
     const st = line.status || 'unknown';
     const noteVal = esc(line.note || '');
@@ -357,11 +366,14 @@ function renderTransit() {
       ? `<span class="info-pill pill-stop"><span class="status-dot dot-stop"></span>運転見合わせ${line.note ? ' — ' + noteVal : ''}</span>`
       : `<span style="font-size:12px;color:var(--text-tertiary)">未確認 — 下のリンクで確認後、ステータスをセットしてください</span>`;
 
+    // 表示用のタイトル（目的地があれば矢印で繋ぐ）
+    const titleText = line.dest ? `${esc(line.name)} ➔ ${esc(line.dest)}` : esc(line.name);
+
     return `<div class="transit-card">
       <div class="tc-header">
         <span class="tc-name">
           <i class="ti ${typeIcon[line.type]}" style="font-size:18px" aria-hidden="true"></i>
-          ${esc(line.name)}
+          ${titleText}
           <span class="type-badge ${typeClass[line.type]}">${typeLabel[line.type]}</span>
         </span>
         <div class="tc-actions">
@@ -397,9 +409,18 @@ function renderTransit() {
 
 function addLine() {
   const name = document.getElementById('lineInput').value.trim();
+  const dest = document.getElementById('destInput').value.trim();
   if (!name) return;
-  lines.push({ name, type: document.getElementById('typeSelect').value, status: 'unknown', note: '', updatedAt: '' });
+  lines.push({ 
+    name, 
+    dest: dest || '', 
+    type: document.getElementById('typeSelect').value, 
+    status: 'unknown', 
+    note: '', 
+    updatedAt: '' 
+  });
   document.getElementById('lineInput').value = '';
+  document.getElementById('destInput').value = '';
   saveLines(); renderTransit(); updateSummary();
 }
 
