@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const q = encodeURIComponent(name + ' 運行情報');
     const urls = [];
 
-    // 公式サイトマッピング
     const JRE = 'https://traininfo.jreast.co.jp/train_info/kanto.aspx';
     const METRO = 'https://www.tokyometro.jp/unkou/index.html';
     const TOEI  = 'https://www.kotsu.metro.tokyo.jp/subway/unkou.html';
@@ -75,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
       '札幌市営地下鉄': 'https://www.city.sapporo.jp/st/',
     };
 
-    // 部分一致
     for (const [key, url] of Object.entries(map)) {
       if (name.includes(key) || key.includes(name)) {
         urls.push({ label: '公式運行情報', url });
@@ -83,9 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Yahoo!路線
     urls.push({ label: 'Yahoo!路線', url: 'https://transit.yahoo.co.jp/traininfo/area/4/' });
-    // Google検索
     urls.push({ label: 'Google検索', url: `https://www.google.com/search?q=${q}` });
 
     return urls;
@@ -97,9 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ── Init ── */
   const d = new Date();
-  topDate.textContent = d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  const topDayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  topDate.textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${topDayNames[d.getDay()]})`;
   dlDate.min = new Date().toISOString().split('T')[0];
-  
+
   renderTransit();
   renderDeadlines();
   updateSummary();
@@ -125,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       transitList.innerHTML = `<div class="empty"><i class="ti ti-train-off"></i>路線がまだ登録されていません<small>上のフォームから追加してください</small></div>`;
       return;
     }
-    
+
     transitList.innerHTML = lines.map((line, i) => {
       const links = searchURL(line.name, line.type);
       const linksHTML = links.map(l =>
@@ -178,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
     }).join('');
 
-    // Attach dynamic events for cards
     document.querySelectorAll('.btn-del-line').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const idx = parseInt(btn.getAttribute('data-index'));
@@ -272,15 +268,23 @@ document.addEventListener('DOMContentLoaded', () => {
       deadlineList.innerHTML = `<div class="empty"><i class="ti ti-filter-off"></i>該当する提出物はありません</div>`;
       return;
     }
-    
+
     deadlineList.innerHTML = items.map(dl => {
       const days = getDays(dl.date);
       const c = urgCls(days);
       const txt = days < 0 ? '期限切れ' : days === 0 ? '今日！' : `あと${days}日`;
-      const dateStr = new Date(dl.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
+      
+      // Formatting date precisely to match Image 1: 5/27(水)
+      const dObj = new Date(dl.date);
+      const month = dObj.getMonth() + 1;
+      const date = dObj.getDate();
+      const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+      const dayOfWeek = dayNames[dObj.getDay()];
+      const dateStr = `${month}/${date}(${dayOfWeek})`;
+
       const notif = days >= 0 && days <= 3 ? '<span class="notif">要注意</span>' : '';
       const idx = deadlines.indexOf(dl);
-      
+
       return `<div class="dl-card">
         <div class="urgency-bar ${c.bar}"></div>
         <div class="dl-content">
@@ -295,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
     }).join('');
 
-    // Attach dynamic events for DL cards
     document.querySelectorAll('.btn-del-dl').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.getAttribute('data-index'));
@@ -337,7 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') addDeadline();
   });
 
-  // Filter Buttons Action
   filterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       filterBtns.forEach(b => b.classList.remove('active'));
@@ -355,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const v = getDays(d.date);
       return v >= 0 && v <= 3;
     }).length;
-    
+
     const now = new Date();
     const me = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     sumTotal.textContent = deadlines.filter(d => {
