@@ -309,7 +309,18 @@
       </div>
       <div class="form-row">
         <input type="text" id="ttRoom" placeholder="教室名（例：301教室）" style="flex: 1;" onkeydown="if(event.key==='Enter')addTimetable()" />
-        <input type="time" id="ttTime" />
+        <select id="ttPeriod">
+          <option value="1">1限 (09:00〜10:00)</option>
+          <option value="2">2限 (10:00〜11:00)</option>
+          <option value="3">3限 (11:00〜12:00)</option>
+          <option value="4">4限 (12:00〜13:00)</option>
+          <option value="5">5限 (13:00〜14:00)</option>
+          <option value="6">6限 (14:00〜15:00)</option>
+          <option value="7">7限 (15:00〜16:00)</option>
+          <option value="8">8限 (16:00〜17:00)</option>
+          <option value="9">9限 (17:00〜18:00)</option>
+          <option value="10">10限 (18:00〜19:00)</option>
+        </select>
         <button class="btn-primary" onclick="addTimetable()"><i class="ti ti-plus" aria-hidden="true"></i> 追加</button>
       </div>
     </div>
@@ -332,6 +343,20 @@ const typeClass = { train:'badge-train', subway:'badge-subway', bus:'badge-bus' 
 const typeIcon  = { train:'ti-train', subway:'ti-train', bus:'ti-bus' };
 const dlTypeLabel = { report:'レポート', exam:'試験', assignment:'課題', other:'その他' };
 const dayLabels = { '1': '月曜日', '2': '火曜日', '3': '水曜日', '4': '木曜日', '5': '金曜日', '6': '土曜日', '0': '日曜日' };
+
+// 時限と対応する授業開始時刻のマッピング
+const periodTimes = { 
+  '1': '09:00', 
+  '2': '10:00', 
+  '3': '11:00', 
+  '4': '12:00', 
+  '5': '13:00', 
+  '6': '14:00', 
+  '7': '15:00', 
+  '8': '16:00', 
+  '9': '17:00', 
+  '10': '18:00' 
+};
 
 /* ── Search URL builder ── */
 function searchURL(name, type, dest) {
@@ -631,7 +656,13 @@ function renderTimetable() {
     <div class="timetable-grid">`;
 
   dayKeys.forEach(dayKey => {
-    const items = timetable.filter(t => t.day === dayKey).sort((a,b) => a.time.localeCompare(b.time));
+    // period（時限）順にソート。periodが無い古いデータはtimeでソート
+    const items = timetable.filter(t => t.day === dayKey).sort((a,b) => {
+      if (a.period && b.period) {
+        return parseInt(a.period) - parseInt(b.period);
+      }
+      return a.time.localeCompare(b.time);
+    });
     
     html += `<div class="tt-col">
       <div class="tt-col-header">${dayLabels[dayKey].replace('曜日', '')}</div>`;
@@ -640,9 +671,14 @@ function renderTimetable() {
       html += `<div class="tt-empty-day">-</div>`;
     } else {
       items.forEach(item => {
+        // 時限表示用（古いデータへの互換性対応）
+        const timeDisplay = item.period 
+          ? `${item.period}限<br><span style="font-size:9px;color:var(--text-secondary);">${periodTimes[item.period]}~</span>` 
+          : esc(item.time);
+        
         html += `<div class="tt-card">
           <div class="tt-card-header">
-            <span class="tt-time">${esc(item.time)}</span>
+            <span class="tt-time" style="line-height: 1.2; padding: 2px 5px; text-align: center;">${timeDisplay}</span>
             <button class="btn-del-tt" onclick="deleteTimetable('${item.id}')" aria-label="削除"><i class="ti ti-x"></i></button>
           </div>
           <span class="tt-title" title="${esc(item.title)}">${esc(item.title)}</span>
@@ -662,10 +698,13 @@ function addTimetable() {
   const day = document.getElementById('ttDay').value;
   const title = document.getElementById('ttTitle').value.trim();
   const room = document.getElementById('ttRoom').value.trim() || '教室未設定';
-  const time = document.getElementById('ttTime').value;
+  const period = document.getElementById('ttPeriod').value;
+  
+  // 選択された時限に紐づく開始時刻を自動設定
+  const time = periodTimes[period];
 
-  if (!title || !time) {
-    alert('科目名と開始時間を入力してください');
+  if (!title) {
+    alert('科目名を入力してください');
     return;
   }
 
@@ -674,12 +713,12 @@ function addTimetable() {
     day,
     title,
     room,
+    period,
     time
   });
 
   document.getElementById('ttTitle').value = '';
   document.getElementById('ttRoom').value = '';
-  document.getElementById('ttTime').value = '';
 
   saveTimetable();
   renderTimetable();
